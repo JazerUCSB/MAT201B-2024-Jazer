@@ -174,6 +174,7 @@ struct MyApp : DistributedAppWithState<CommonState>
     for (int i = 0; i < numParticles; i++)
     {
       mesh.vertices()[i] = state().positions[i];
+      mesh.colors()[i] = state().colorz[i];
     }
   }
 
