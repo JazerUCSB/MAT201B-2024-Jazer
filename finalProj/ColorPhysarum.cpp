@@ -27,18 +27,20 @@ struct CommonState
 {
   float pointSize;
   Vec3f positions[numParticles];
-  HSV colorz[numParticles];
+  HSV colors[numParticles];
+ 
 };
 
 struct MyApp : DistributedAppWithState<CommonState>
 {
 
   Parameter pointSize{"pointSize", "", 1, 0.1, 4.0};
-  Parameter sight{"sight", "", 0.25, 0.001, .75};
-  Parameter turnRate{"turnRate", "", 0.15, 0.001, .45};
+  Parameter sight{"sight", "", 0.45, 0.001, .75};
+  Parameter turnRate{"turnRate", "", 0.35, 0.01, .55};
   Parameter randTurn{"randTurn", "", 0.01, 0.001, .25};
-  Parameter sphereK{"sphereK", "", 0.1, 0.0001, .25};
-  Parameter minDist{"minDist", "", 0.01, 0.0001, .25};
+  Parameter sphereK{"sphereK", "", 0.14, 0.01, .55};
+  Parameter minDist{"minDist", "", 0.02, 0.0001, .25};
+  Parameter moveRate{"moveRate", "", 0.035, 0.01, .25};
 
   ShaderProgram pointShader;
 
@@ -66,6 +68,7 @@ struct MyApp : DistributedAppWithState<CommonState>
       gui.add(randTurn);
       gui.add(sphereK);
       gui.add(minDist);
+      gui.add(moveRate);
     }
   }
   void onCreate() override
@@ -88,7 +91,7 @@ struct MyApp : DistributedAppWithState<CommonState>
         p.faceToward(randomVec3f(1), 1);
         state().positions[i] = p.pos();
         HSV randC = HSV(rnd::uniform(), 1.0f, 1.0f);
-        state().colorz[i] = randC;
+        state().colors[i] = randC;
       }
 
       nav().pos(0, 0, 10);
@@ -97,14 +100,14 @@ struct MyApp : DistributedAppWithState<CommonState>
     for (int i = 0; i < numParticles; i++)
     {
       mesh.vertex(state().positions[i]);
-      HSV col = state().colorz[i];
+      HSV col = state().colors[i];
       mesh.color(col);
       mesh.texCoord(1.0, 0);
     }
   }
 
   double phase = 0;
-  double move_rate = .02;
+  
 
   void onAnimate(double dt) override
   {
@@ -133,31 +136,37 @@ struct MyApp : DistributedAppWithState<CommonState>
         }
         for (int j = 0; j < numParticles; j++)
         {
-
-          HSV h1 = mesh.colors()[i];
-          HSV h2 = mesh.colors()[j];
+          Nav &p2 = particles[j];
+          HSV h1 = state().colors[i];
+          HSV h2 = state().colors[j];
 
           if (i != j)
           {
-            Vec3f D = mesh.vertices()[j] - mesh.vertices()[i];
+            Vec3f D = p2.pos() - p.pos();
             float d = D.mag();
             D.normalize();
             bool viewCheck = (D.x * p.uf().x + D.y * p.uf().y + D.z * p.uf().z) >= 0;
-            bool hueCheck = abs(sin(M_PI_2 * (h2.h - h1.h))) > .13;
+            float hueDif = sin(M_PI_2 * (h2.h - h1.h));
+            bool hueCheck = abs(hueDif) > .2;
             Vec3f dirRep = p.uf() - D;
             Vec3f dirAtt = p.uf() + D;
 
             if (d < sight && viewCheck && hueCheck && d > minDist)
             {
               p.faceToward(p.pos() + dirRep, turnRate);
+              state().colors[i].h += hueDif*.002;
+              
             }
             if (d < sight && viewCheck && !hueCheck && d > minDist)
             {
               p.faceToward(p.pos() + dirAtt, turnRate);
+              state().colors[i].h += hueDif*.002;
+              
             }
             if (d < minDist)
             {
               p.faceToward(p.pos() + dirRep, 1.);
+              
             }
           }
         }
@@ -165,8 +174,11 @@ struct MyApp : DistributedAppWithState<CommonState>
         Vec3f rand = randomVec3f(1);
         rand.normalize();
         p.faceToward(p.pos() + p.uf() + rand, randTurn);
-        p.moveF(move_rate);
+        p.moveF(moveRate);
         p.step();
+        if(state().colors[i].h > 1.0){
+          state().colors[i].h += 1.0;
+        }
       }
       state().pointSize = pointSize;
     }
@@ -174,7 +186,7 @@ struct MyApp : DistributedAppWithState<CommonState>
     for (int i = 0; i < numParticles; i++)
     {
       mesh.vertices()[i] = state().positions[i];
-      mesh.colors()[i] = state().colorz[i];
+      mesh.colors()[i] = state().colors[i];
     }
   }
 
