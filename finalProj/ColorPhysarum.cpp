@@ -28,7 +28,6 @@ struct CommonState
   float pointSize;
   Vec3f positions[numParticles];
   HSV colors[numParticles];
- 
 };
 
 struct MyApp : DistributedAppWithState<CommonState>
@@ -107,7 +106,6 @@ struct MyApp : DistributedAppWithState<CommonState>
   }
 
   double phase = 0;
-  
 
   void onAnimate(double dt) override
   {
@@ -154,19 +152,16 @@ struct MyApp : DistributedAppWithState<CommonState>
             if (d < sight && viewCheck && hueCheck && d > minDist)
             {
               p.faceToward(p.pos() + dirRep, turnRate);
-              state().colors[i].h += hueDif*.002;
-              
+              state().colors[i].h += hueDif * .002;
             }
             if (d < sight && viewCheck && !hueCheck && d > minDist)
             {
               p.faceToward(p.pos() + dirAtt, turnRate);
-              state().colors[i].h += hueDif*.002;
-              
+              state().colors[i].h += hueDif * .002;
             }
             if (d < minDist)
             {
               p.faceToward(p.pos() + dirRep, 1.);
-              
             }
           }
         }
@@ -176,7 +171,8 @@ struct MyApp : DistributedAppWithState<CommonState>
         p.faceToward(p.pos() + p.uf() + rand, randTurn);
         p.moveF(moveRate);
         p.step();
-        if(state().colors[i].h > 1.0){
+        if (state().colors[i].h > 1.0)
+        {
           state().colors[i].h += 1.0;
         }
       }
