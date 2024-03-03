@@ -115,7 +115,7 @@ struct MyApp : public App
         for (int i = 0; i < numPrey; i++)
         {
             Nav &p = preys[i];
-            preyDir += p.uf();
+            preyDir += p.uf()/numPrey;
             if (p.pos().mag() > 2)
             {
                 p.faceToward(Vec3f(0, 0, 0), .015);

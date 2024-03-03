@@ -40,6 +40,31 @@ struct MyApp : DistributedAppWithState<CommonState>
   Parameter sphereK{"sphereK", "", 0.14, 0.01, .55};
   Parameter minDist{"minDist", "", 0.02, 0.0001, .25};
   Parameter moveRate{"moveRate", "", 0.035, 0.01, .25};
+  Parameter steps{"steps", "", 1, 1, 30};
+  Parameter dx{"dx", "", 1, 0, 10};
+  Parameter dy{"dy", "", 1, 0, 10};
+
+  void updateFBO(int w, int h)
+  {
+    // Note: all attachments (textures, RBOs, etc.) to the FBO must have the same width and height.
+
+    // Configure texture on GPU, simulation requires using floating point textures
+    tex0->create2D(w, h, Texture::RGBA32F, Texture::RGBA, Texture::FLOAT);
+    tex1->create2D(w, h, Texture::RGBA32F, Texture::RGBA, Texture::FLOAT);
+
+    // Configure render buffer object on GPU
+    rbo0.resize(w, h);
+
+    // Finally, attach color texture and depth RBO to FBO
+    fbo0.bind();
+    // fbo0.attachTexture2D(tex0);
+    fbo0.attachRBO(rbo0);
+    fbo0.unbind();
+  }
+
+  Texture *tex0, *tex1;
+  RBO rbo0;
+  FBO fbo0;
 
   ShaderProgram pointShader;
 
@@ -68,10 +93,16 @@ struct MyApp : DistributedAppWithState<CommonState>
       gui.add(sphereK);
       gui.add(minDist);
       gui.add(moveRate);
+      gui.add(steps);
+      gui.add(dx);
+      gui.add(dy);
     }
   }
   void onCreate() override
   {
+    tex0 = new Texture();
+    tex1 = new Texture();
+    updateFBO(fbWidth(), fbHeight());
 
     // compile shaders
     pointShader.compile(slurp("../point-vertex.glsl"),
@@ -197,15 +228,43 @@ struct MyApp : DistributedAppWithState<CommonState>
   {
 
     g.clear(0, 0, 0, .0);
-
-    g.shader(pointShader);
-    float pSize = state().pointSize;
-    g.shader().uniform("pointSize", pSize / 100);
-    // g.shader().uniform("tex", texBlur);
     g.blending(true);
     g.blendTrans();
     g.depthTesting(true);
     g.draw(mesh);
+
+    g.framebuffer(fbo0);
+    
+    
+    
+
+    for (int i = 0; i < steps * 2; i++)
+    {
+      fbo0.attachTexture2D(*tex1); // tex1 will act as fbo0 render target
+      g.viewport(0, 0, fbWidth(), fbHeight());
+      g.camera(Viewpoint::IDENTITY);
+
+     
+      pointShader.use();
+      pointShader.uniform("pointSize", state().pointSize / 100);
+      g.quad(*tex0, -1, -1, 2, 2);
+
+      // swap textures
+      Texture *tmp = tex0;
+      tex0 = tex1;
+      tex1 = tmp;
+    }
+
+
+    
+
+    // draw to screen using colormap shader
+    g.framebuffer(FBO::DEFAULT);
+    pointShader.use();
+    pointShader.uniform("pointSize", state().pointSize / 100);
+    g.viewport(0, 0, fbWidth(), fbHeight());
+    g.camera(Viewpoint::IDENTITY);
+    g.quad(*tex1, -1, -1, 2, 2);
   }
 
   bool onKeyDown(const Keyboard &k) override

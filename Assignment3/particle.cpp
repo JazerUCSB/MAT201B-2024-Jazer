@@ -30,9 +30,11 @@ struct AlloApp : App
 
   //  simulation state
   Mesh mesh; // position *is inside the mesh* mesh.vertices() are the positions
+ // Texture texBlur;
   vector<Vec3f> velocity;
   vector<Vec3f> force;
   vector<float> mass;
+
   HSV col;
 
   void onInit() override
@@ -83,7 +85,7 @@ struct AlloApp : App
       velocity.push_back(randomVec3f(0.1));
       force.push_back(randomVec3f(1));
     }
-
+    //texBlur.filter(Texture::LINEAR);
     nav().pos(0, 0, 10);
   }
 
@@ -185,13 +187,28 @@ struct AlloApp : App
 
   void onDraw(Graphics &g) override
   {
-    g.clear(0.3);
+    //g.clear(0.0);
+
+    //texBlur.resize(fbWidth(), fbHeight());
+    
+    
+    // g.tint(.98);
+    // // g.quadViewport(texBlur, -1.005, -1.005, 2.01, 2.01); // Outward
+    // g.quadViewport(texBlur, -0.995, -0.995, 1.99, 1.99); // Inward
+    // // g.quadViewport(texBlur, -1.005, -1.00, 2.01, 2.0); // Oblate
+    // //  g.quadViewport(texBlur, -1.005, -0.995, 2.01, 1.99); // Squeeze
+    // //  g.quadViewport(texBlur, -1, -1, 2, 2); // non-transformed
+    // g.tint(1); // set tint back to 1
+
+
     g.shader(pointShader);
     g.shader().uniform("pointSize", pointSize / 100);
+    //g.shader().uniform("tex", texBlur);
     g.blending(true);
     g.blendTrans();
     g.depthTesting(true);
     g.draw(mesh);
+   // texBlur.copyFrameBuffer();
   }
 };
 

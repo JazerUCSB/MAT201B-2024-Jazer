@@ -12,12 +12,14 @@ uniform float pointSize;
 in Vertex {
   vec4 color;
   float size;
+  vec2 uv;
 }
 vertex[];
 
 out Fragment {
   vec4 color;
   vec2 mapping;
+  vec2 uv;
 }
 fragment;
 
