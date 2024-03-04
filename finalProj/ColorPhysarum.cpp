@@ -9,8 +9,6 @@
 #include "al_ext/statedistribution/al_CuttleboneDomain.hpp"
 #include "al_ext/statedistribution/al_CuttleboneStateSimulationDomain.hpp"
 
-// #include "al/app/al_OmniRendererDomain.hpp"
-
 using namespace std;
 using namespace al;
 
@@ -44,6 +42,9 @@ struct MyApp : DistributedAppWithState<CommonState>
   Parameter sphereK{"sphereK", "", 0.14, 0.01, .55};
   Parameter minDist{"minDist", "", 0.02, 0.0001, .25};
   Parameter moveRate{"moveRate", "", 0.035, 0.01, .25};
+  ParameterInt steps{"steps", "", 1, 1, 30};
+  Parameter dx{"dx", "", 1, 0, 10};
+  Parameter dy{"dy", "", 1, 0, 10};
 
   ShaderProgram pointShader;
   ShaderProgram feedbackShader;
@@ -91,6 +92,9 @@ struct MyApp : DistributedAppWithState<CommonState>
       gui.add(sphereK);
       gui.add(minDist);
       gui.add(moveRate);
+      gui.add(steps);
+      gui.add(dx);
+      gui.add(dy);
     }
   }
   void onCreate() override
@@ -107,6 +111,7 @@ struct MyApp : DistributedAppWithState<CommonState>
                         slurp("../point-geometry.glsl"));
 
     feedbackShader.compile(slurp("../feedback-vertex.glsl"),
+                           slurp("../feedback-geometry.glsl"),
                            slurp("../feedback-fragment.glsl"));
 
     mesh.primitive(Mesh::POINTS);
@@ -237,23 +242,24 @@ struct MyApp : DistributedAppWithState<CommonState>
 
     g.framebuffer(fbo0);
 
-    // for(int i = 0; i < 1 * 2; i++){
-    fbo0.attachTexture2D(*tex1); // tex1 will act as fbo0 render target
-    g.viewport(0, 0, fbWidth(), fbHeight());
-    g.camera(Viewpoint::IDENTITY);
+    for (int i = 0; i < steps * 2; i++)
+    {
+      fbo0.attachTexture2D(*tex1); // tex1 will act as fbo0 render target
+      g.viewport(0, 0, fbWidth(), fbHeight());
+      g.camera(Viewpoint::IDENTITY);
 
-    feedbackShader.use();
-    feedbackShader.uniform("tex", 0);
-    // feedbackShader.uniform("size", Vec2f(fbWidth(),fbHeight()));
-    // feedbackShader.uniform("dx", dx);
-    // feedbackShader.uniform("dy", dy);
-    g.quad(*tex0, -1, -1, 2, 2);
+      g.shader(feedbackShader);
+      g.shader().uniform("tex0", 0);
+      g.shader().uniform("size", Vec2f(fbWidth(), fbHeight()));
+      g.shader().uniform("dx", dx);
+      g.shader().uniform("dy", dy);
+      g.quad(*tex0, -1, -1, 2, 2);
 
-    // swap textures
-    Texture *tmp = tex0;
-    tex0 = tex1;
-    tex1 = tmp;
-    //}
+      // swap textures
+      Texture *tmp = tex0;
+      tex0 = tex1;
+      tex1 = tmp;
+    }
 
     // draw to screen
     g.framebuffer(FBO::DEFAULT);
