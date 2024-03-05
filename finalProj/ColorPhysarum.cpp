@@ -31,8 +31,8 @@ struct CommonState
 struct MyApp : DistributedAppWithState<CommonState>
 {
 
-  Parameter pointSize{"pointSize", "", 1, 0.1, 4.0};
-  Parameter sight{"sight", "", 0.45, 0.001, .75};
+  Parameter pointSize{"pointSize", "", 1, 0.1, 10.0};
+  Parameter sight{"sight", "", 0.45, 0.001, 1.0};
   Parameter turnRate{"turnRate", "", 0.35, 0.01, .55};
   Parameter randTurn{"randTurn", "", 0.01, 0.001, .25};
   Parameter sphereK{"sphereK", "", 0.14, 0.01, .55};
@@ -42,6 +42,11 @@ struct MyApp : DistributedAppWithState<CommonState>
   ShaderProgram pointShader;
 
   Nav particles[numParticles];
+  Vec3f oldPos[numParticles];
+  Vec3f vel[numParticles];
+  Vec3f oldVel[numParticles];
+  Vec3f acc[numParticles];
+  Vec3f oldAcc[numParticles];
 
   Mesh mesh;
 
@@ -84,9 +89,17 @@ struct MyApp : DistributedAppWithState<CommonState>
       {
 
         Nav &p = particles[i];
-        p.pos(randomVec3f(3));
+        Vec3f newPos = randomVec3f(3);
+        p.pos(newPos);
         p.faceToward(randomVec3f(1), 1);
         state().positions[i] = p.pos();
+
+        oldPos[i] = newPos;
+        vel[i] = 0;
+        oldVel[i] = 0;
+        acc[i] = 0;
+        oldAcc[i] = 0;
+
         HSV randC = HSV(rnd::uniform(), 1.0f, 1.0f);
         state().colors[i] = randC;
       }
@@ -115,6 +128,9 @@ struct MyApp : DistributedAppWithState<CommonState>
       {
 
         Nav &p = particles[i];
+        oldPos[i] = p.pos();
+        oldVel[i] = vel[i];
+        oldAcc[i] = acc[i];
 
         Vec3f spher = p.pos();
         spher.normalize();
@@ -163,15 +179,22 @@ struct MyApp : DistributedAppWithState<CommonState>
             }
           }
         }
+
+        vel[i] = p.pos() - oldPos[i];
+        acc[i] = vel[i] - oldVel[i];
+        Vec3f jerk = acc[i] - oldAcc[i];
+
         state().positions[i] = p.pos();
         Vec3f rand = randomVec3f(1);
         rand.normalize();
         p.faceToward(p.pos() + p.uf() + rand, randTurn);
         p.moveF(moveRate);
         p.step();
+        state().colors[i].h += jerk.mag() * 0.5;
+
         if (state().colors[i].h > 1.0)
         {
-          state().colors[i].h += 1.0;
+          state().colors[i].h -= 1.0;
         }
       }
       state().pointSize = pointSize;
