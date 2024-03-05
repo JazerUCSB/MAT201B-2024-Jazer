@@ -31,10 +31,6 @@ struct CommonState
 struct MyApp : DistributedAppWithState<CommonState>
 {
 
-  Texture *tex0, *tex1;
-  RBO rbo0;
-  FBO fbo0;
-
   Parameter pointSize{"pointSize", "", 1, 0.1, 4.0};
   Parameter sight{"sight", "", 0.45, 0.001, .75};
   Parameter turnRate{"turnRate", "", 0.35, 0.01, .55};
@@ -42,34 +38,12 @@ struct MyApp : DistributedAppWithState<CommonState>
   Parameter sphereK{"sphereK", "", 0.14, 0.01, .55};
   Parameter minDist{"minDist", "", 0.02, 0.0001, .25};
   Parameter moveRate{"moveRate", "", 0.035, 0.01, .25};
-  ParameterInt steps{"steps", "", 1, 1, 30};
-  Parameter dx{"dx", "", 1, 0, 10};
-  Parameter dy{"dy", "", 1, 0, 10};
 
   ShaderProgram pointShader;
-  ShaderProgram feedbackShader;
 
   Nav particles[numParticles];
 
   Mesh mesh;
-
-  void updateFBO(int w, int h)
-  {
-    // Note: all attachments (textures, RBOs, etc.) to the FBO must have the same width and height.
-
-    // Configure texture on GPU
-    tex0->create2D(w, h, Texture::RGBA32F, Texture::RGBA, Texture::FLOAT);
-    tex1->create2D(w, h, Texture::RGBA32F, Texture::RGBA, Texture::FLOAT);
-
-    // Configure render buffer object on GPU
-    rbo0.resize(w, h);
-
-    // Finally, attach color texture and depth RBO to FBO
-    fbo0.bind();
-    // fbo0.attachTexture2D(tex0);
-    fbo0.attachRBO(rbo0);
-    fbo0.unbind();
-  }
 
   void onInit() override
   {
@@ -92,27 +66,15 @@ struct MyApp : DistributedAppWithState<CommonState>
       gui.add(sphereK);
       gui.add(minDist);
       gui.add(moveRate);
-      gui.add(steps);
-      gui.add(dx);
-      gui.add(dy);
     }
   }
   void onCreate() override
   {
 
-    // initialize fbo, rbo, texture for rendering using default framebuffer dimensions
-    tex0 = new Texture();
-    tex1 = new Texture();
-    updateFBO(fbWidth(), fbHeight());
-
     // compile shaders
     pointShader.compile(slurp("../point-vertex.glsl"),
                         slurp("../point-fragment.glsl"),
                         slurp("../point-geometry.glsl"));
-
-    feedbackShader.compile(slurp("../feedback-vertex.glsl"),
-                           slurp("../feedback-geometry.glsl"),
-                           slurp("../feedback-fragment.glsl"));
 
     mesh.primitive(Mesh::POINTS);
 
@@ -239,33 +201,6 @@ struct MyApp : DistributedAppWithState<CommonState>
     g.blendTrans();
     g.depthTesting(true);
     g.draw(mesh);
-
-    g.framebuffer(fbo0);
-
-    for (int i = 0; i < steps * 2; i++)
-    {
-      fbo0.attachTexture2D(*tex1); // tex1 will act as fbo0 render target
-      g.viewport(0, 0, fbWidth(), fbHeight());
-      g.camera(Viewpoint::IDENTITY);
-
-      g.shader(feedbackShader);
-      g.shader().uniform("tex0", 0);
-      g.shader().uniform("size", Vec2f(fbWidth(), fbHeight()));
-      g.shader().uniform("dx", dx);
-      g.shader().uniform("dy", dy);
-      g.quad(*tex0, -1, -1, 2, 2);
-
-      // swap textures
-      Texture *tmp = tex0;
-      tex0 = tex1;
-      tex1 = tmp;
-    }
-
-    // draw to screen
-    g.framebuffer(FBO::DEFAULT);
-    g.viewport(0, 0, fbWidth(), fbHeight());
-    g.camera(Viewpoint::IDENTITY);
-    g.quad(*tex1, -1, -1, 2, 2);
   }
 
   bool onKeyDown(const Keyboard &k) override
