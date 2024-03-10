@@ -6,11 +6,13 @@ layout(location = 2) in vec2 vertexSize;
 // vertexSize is 2D texture cordinate, but we only use the x
 
 uniform mat4 al_ModelViewMatrix;
-uniform mat4 al_ProjectionMatrix;
+//uniform mat4 al_ProjectionMatrix;
 
 out Vertex {
   vec4 color;
   float size;
+  vec2 uv;
+  vec3 pos;
 }
 vertex;
 
@@ -18,4 +20,6 @@ void main() {
   gl_Position = al_ModelViewMatrix * vec4(vertexPosition, 1.0);
   vertex.color = vertexColor;
   vertex.size = vertexSize.x;
+  vertex.uv = vertexSize;
+  vertex.pos = vertexPosition;
 }

@@ -19,7 +19,7 @@ Vec3f randomVec3f(float scale)
 
 string slurp(string fileName); // forward declaration
 
-const int numParticles = 1200;
+const int numParticles = 1000;
 
 struct CommonState
 {
@@ -190,7 +190,6 @@ struct MyApp : DistributedAppWithState<CommonState>
         p.faceToward(p.pos() + p.uf() + rand, randTurn);
         p.moveF(moveRate);
         p.step();
-        state().colors[i].h += jerk.mag() * 0.5;
 
         if (state().colors[i].h > 1.0)
         {
@@ -205,6 +204,7 @@ struct MyApp : DistributedAppWithState<CommonState>
       mesh.vertices()[i] = state().positions[i];
       mesh.colors()[i] = state().colors[i];
     }
+    
   }
 
   void onSound(AudioIOData &io) override
@@ -219,7 +219,8 @@ struct MyApp : DistributedAppWithState<CommonState>
 
     g.clear(0, 0, 0, .0);
     g.shader(pointShader);
-    g.shader().uniform("pointSize", state().pointSize / 100);
+    float pSize = state().pointSize;
+    g.shader().uniform("pointSize", pSize / 100);
     g.blending(true);
     g.blendTrans();
     g.depthTesting(true);
