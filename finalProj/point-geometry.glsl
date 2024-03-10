@@ -7,7 +7,7 @@ layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
 // XXX ~ what about winding? should use triangles?
 
-//uniform mat4 al_ModelViewMatrix;
+uniform mat4 al_ModelViewMatrix;
 uniform mat4 al_ProjectionMatrix;
 uniform float pointSize;
 
@@ -23,47 +23,47 @@ out Fragment {
   vec4 color;
   vec2 mapping;
   vec2 uv;
+  vec3 pos;
 }
 fragment;
 
 void main() {
   mat4 m = al_ProjectionMatrix;   // rename to make lines shorter
+  mat4 p = al_ModelViewMatrix;
   vec4 v = gl_in[0].gl_Position;  // al_ModelViewMatrix * gl_Position
   
-  vec3 vv = normalize(v.xyz);
-
-  float hex = cos(PI*(vv.x));
-  float why = cos(PI*(vv.y));
-  float zee = sin(PI*(vv.z));
+  vec3 vv = normalize(abs(v.xyz));
 
 
+  float hex = 1.0;
+  
+  
 
    float r = pointSize;
    hex *= vertex[0].size*r;
-   why *= vertex[0].size*r;
-   zee *= vertex[0].size*r;
-
-  gl_Position = m * (v + vec4(-hex, -why, zee, 0.0));
+  
+  gl_Position = m * v + vec4(-hex, -hex, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(-1.0, -1.0);
   EmitVertex();
 
-  gl_Position = m * (v + vec4(hex, -why, -zee, 0.0));
+  gl_Position = m * v + vec4(hex, -hex, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(1.0, -1.0);
   EmitVertex();
 
-  gl_Position = m * (v + vec4(-hex, why, -zee, 0.0));
+  gl_Position = m * v + vec4(-hex, hex, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(-1.0, 1.0);
   EmitVertex();
 
-  gl_Position = m * (v + vec4(hex, why, zee, 0.0));
+  gl_Position = m * v + vec4(hex, hex, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(1.0, 1.0);
   EmitVertex();
 
   fragment.uv = vertex[0].uv;
+  fragment.pos = vertex[0].pos;
   EndPrimitive();
   
 }

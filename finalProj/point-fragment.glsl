@@ -6,6 +6,7 @@ in Fragment {
   vec4 color;
   vec2 mapping;
   vec2 uv;
+  vec3 pos;
   
 }
 fragment;

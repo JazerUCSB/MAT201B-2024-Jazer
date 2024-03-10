@@ -88,6 +88,7 @@ struct MyApp : DistributedAppWithState<CommonState>
       for (int i = 0; i < numParticles; i++)
       {
 
+
         Nav &p = particles[i];
         Vec3f newPos = randomVec3f(3);
         p.pos(newPos);
@@ -204,7 +205,7 @@ struct MyApp : DistributedAppWithState<CommonState>
       mesh.vertices()[i] = state().positions[i];
       mesh.colors()[i] = state().colors[i];
     }
-    
+
   }
 
   void onSound(AudioIOData &io) override
