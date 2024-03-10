@@ -31,7 +31,7 @@ struct CommonState
 struct MyApp : DistributedAppWithState<CommonState>
 {
 
-  Parameter pointSize{"pointSize", "", 1, 0.1, 10.0};
+  Parameter pointSize{"pointSize", "", 5, 0.1, 20.0};
   Parameter sight{"sight", "", 0.45, 0.001, 1.0};
   Parameter turnRate{"turnRate", "", 0.35, 0.01, .55};
   Parameter randTurn{"randTurn", "", 0.01, 0.001, .25};
@@ -87,7 +87,6 @@ struct MyApp : DistributedAppWithState<CommonState>
     {
       for (int i = 0; i < numParticles; i++)
       {
-
 
         Nav &p = particles[i];
         Vec3f newPos = randomVec3f(3);
@@ -205,7 +204,6 @@ struct MyApp : DistributedAppWithState<CommonState>
       mesh.vertices()[i] = state().positions[i];
       mesh.colors()[i] = state().colors[i];
     }
-
   }
 
   void onSound(AudioIOData &io) override

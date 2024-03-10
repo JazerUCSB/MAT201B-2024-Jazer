@@ -1,6 +1,5 @@
 #version 400
 
-#define PI 3.141592653
 // take in a point and output a triangle strip with 4 vertices (aka a "quad")
 //
 layout(points) in;
@@ -29,35 +28,26 @@ fragment;
 
 void main() {
   mat4 m = al_ProjectionMatrix;   // rename to make lines shorter
-  mat4 p = al_ModelViewMatrix;
   vec4 v = gl_in[0].gl_Position;  // al_ModelViewMatrix * gl_Position
+    
+  float r = vertex[0].size*pointSize;
   
-  vec3 vv = normalize(abs(v.xyz));
-
-
-  float hex = 1.0;
-  
-  
-
-   float r = pointSize;
-   hex *= vertex[0].size*r;
-  
-  gl_Position = m * v + vec4(-hex, -hex, 0.0, 0.0);
+  gl_Position = m * v + vec4(-r, -r, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(-1.0, -1.0);
   EmitVertex();
 
-  gl_Position = m * v + vec4(hex, -hex, 0.0, 0.0);
+  gl_Position = m * v + vec4(r, -r, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(1.0, -1.0);
   EmitVertex();
 
-  gl_Position = m * v + vec4(-hex, hex, 0.0, 0.0);
+  gl_Position = m * v + vec4(-r, r, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(-1.0, 1.0);
   EmitVertex();
 
-  gl_Position = m * v + vec4(hex, hex, 0.0, 0.0);
+  gl_Position = m * v + vec4(r, r, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(1.0, 1.0);
   EmitVertex();
