@@ -291,11 +291,14 @@ int main()
   AudioDevice::printAll();
   // app.audioIO().deviceIn(AudioDevice("MacBook Pro Microphone"));
   // app.audioIO().deviceOut(AudioDevice("MacBook Pro Speakers"));
+  app.audioIO().deviceOut(AudioDevice("ECHO X5"));
 
   // int device_index_out = app.audioIO().channelsOutDevice();
   // int device_index_in = app.audioIO().channelsInDevice();
   // std::cout << "in:" << device_index_in << " out:" << device_index_out << std::endl;
-  app.configureAudio(44100, 512, 60, 0);
+  // app.configureAudio(44100, 512, 60, 0);
+  //  Use this for sphere
+  app.configureAudio(44100, 512, -1, -1);
   app.start();
   return 0;
 }
