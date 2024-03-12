@@ -161,6 +161,7 @@ struct MyApp : DistributedAppWithState<CommonState>
     {
       phase += dt;
       int maxIndex = 0;
+      float maxJerk = 0;
       for (int i = 0; i < numParticles; i++)
       {
 
@@ -216,7 +217,6 @@ struct MyApp : DistributedAppWithState<CommonState>
             }
           }
         }
-        float maxJerk = 0;
 
         vel[i] = p.pos() - oldPos[i];
         acc[i] = vel[i] - oldVel[i];
@@ -242,6 +242,7 @@ struct MyApp : DistributedAppWithState<CommonState>
       state().pointSize = pointSize;
       Vec3f maxPos = particles[maxIndex].pos();
       srcpos.set(maxPos.normalize());
+      state().colors[maxIndex].h += .015;
     }
 
     for (int i = 0; i < numParticles; i++)
