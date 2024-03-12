@@ -1,11 +1,16 @@
 
 #include <iostream>
+// #include <atomic>
 #include <fstream>
 #include <vector>
 #include "al/app/al_DistributedApp.hpp"
 #include "al/graphics/al_Image.hpp"
 #include "al/math/al_Random.hpp"
 #include "al/app/al_GUIDomain.hpp"
+#include "al/scene/al_DynamicScene.hpp"
+#include "al/sound/al_Vbap.hpp"
+#include "al/sphere/al_AlloSphereSpeakerLayout.hpp"
+#include "al/ui/al_Parameter.hpp"
 #include "al_ext/statedistribution/al_CuttleboneDomain.hpp"
 #include "al_ext/statedistribution/al_CuttleboneStateSimulationDomain.hpp"
 
@@ -38,8 +43,15 @@ struct MyApp : DistributedAppWithState<CommonState>
   Parameter sphereK{"sphereK", "", 0.14, 0.01, .55};
   Parameter minDist{"minDist", "", 0.02, 0.0001, .25};
   Parameter moveRate{"moveRate", "", 0.035, 0.01, .25};
+  ParameterVec3 srcpos{"srcPos", "", {0.0, 0.0, 0.0}};
+
+  // atomic<float> *mPeaks{nullptr};
+
+  Spatializer *spatializer{nullptr};
 
   ShaderProgram pointShader;
+
+  Speakers speakerLayout;
 
   Nav particles[numParticles];
   Vec3f oldPos[numParticles];
@@ -50,8 +62,32 @@ struct MyApp : DistributedAppWithState<CommonState>
 
   Mesh mesh;
 
+  void initSpeakers()
+  {
+    speakerLayout = AlloSphereSpeakerLayout();
+    // if (mPeaks) {
+    //   free(mPeaks);
+    // }
+    // mPeaks = new atomic<float>[speakerLayout.size()]; // Not being freed
+    //                                                   // in this example
+  }
+
+  void initSpatializer()
+  {
+    if (spatializer)
+    {
+      delete spatializer;
+    }
+    spatializer = new Vbap(speakerLayout, true);
+    spatializer->compile();
+  }
+
   void onInit() override
   {
+    audioIO().channelsBus(1);
+    initSpeakers();
+    initSpatializer();
+
     auto cuttleboneDomain =
         CuttleboneStateSimulationDomain<CommonState>::enableCuttlebone(this);
     if (!cuttleboneDomain)
@@ -71,6 +107,7 @@ struct MyApp : DistributedAppWithState<CommonState>
       gui.add(sphereK);
       gui.add(minDist);
       gui.add(moveRate);
+      gui.add(srcpos);
     }
   }
   void onCreate() override
@@ -123,7 +160,7 @@ struct MyApp : DistributedAppWithState<CommonState>
     if (isPrimary())
     {
       phase += dt;
-
+      int maxIndex = 0;
       for (int i = 0; i < numParticles; i++)
       {
 
@@ -179,10 +216,16 @@ struct MyApp : DistributedAppWithState<CommonState>
             }
           }
         }
+        float maxJerk = 0;
 
         vel[i] = p.pos() - oldPos[i];
         acc[i] = vel[i] - oldVel[i];
         Vec3f jerk = acc[i] - oldAcc[i];
+        if (jerk.mag() > maxJerk)
+        {
+          maxJerk = jerk.mag();
+          maxIndex = i;
+        }
 
         state().positions[i] = p.pos();
         Vec3f rand = randomVec3f(1);
@@ -197,6 +240,8 @@ struct MyApp : DistributedAppWithState<CommonState>
         }
       }
       state().pointSize = pointSize;
+      Vec3f maxPos = particles[maxIndex].pos();
+      srcpos.set(maxPos.normalize());
     }
 
     for (int i = 0; i < numParticles; i++)
@@ -208,9 +253,17 @@ struct MyApp : DistributedAppWithState<CommonState>
 
   void onSound(AudioIOData &io) override
   {
-    // while (io()) {
-    //   io.out(0) = io.out(1) = io.in(0) * signal;
-    // }
+    while (io())
+    {
+      // float env = (22050 - (counter % 22050)) / 22050.0f;
+      io.bus(0) = 0.5f * rnd::uniform();
+      // ++counter;
+    }
+    //    // Spatialize
+    spatializer->prepare(io);
+    spatializer->renderBuffer(io, srcpos.get(), io.busBuffer(0),
+                              io.framesPerBuffer());
+    spatializer->finalize(io);
   }
 
   void onDraw(Graphics &g) override
@@ -235,13 +288,13 @@ int main()
 {
   MyApp app;
   AudioDevice::printAll();
-  app.audioIO().deviceIn(AudioDevice("MacBook Pro Microphone"));
-  app.audioIO().deviceOut(AudioDevice("MacBook Pro Speakers"));
+  // app.audioIO().deviceIn(AudioDevice("MacBook Pro Microphone"));
+  // app.audioIO().deviceOut(AudioDevice("MacBook Pro Speakers"));
 
-  int device_index_out = app.audioIO().channelsOutDevice();
-  int device_index_in = app.audioIO().channelsInDevice();
-  std::cout << "in:" << device_index_in << " out:" << device_index_out << std::endl;
-
+  // int device_index_out = app.audioIO().channelsOutDevice();
+  // int device_index_in = app.audioIO().channelsInDevice();
+  // std::cout << "in:" << device_index_in << " out:" << device_index_out << std::endl;
+  app.configureAudio(44100, 512, 60, 0);
   app.start();
   return 0;
 }
