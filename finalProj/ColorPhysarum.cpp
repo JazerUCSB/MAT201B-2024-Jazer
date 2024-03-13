@@ -1,6 +1,5 @@
 
 #include <iostream>
-// #include <atomic>
 #include <fstream>
 #include <vector>
 #include "al/app/al_DistributedApp.hpp"
@@ -22,7 +21,7 @@ Vec3f randomVec3f(float scale)
   return Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()) * scale;
 }
 
-string slurp(string fileName); // forward declaration
+string slurp(string fileName);
 
 const int numParticles = 1000;
 
@@ -44,14 +43,15 @@ struct MyApp : DistributedAppWithState<CommonState>
   Parameter minDist{"minDist", "", 0.02, 0.0001, .25};
   Parameter moveRate{"moveRate", "", 0.035, 0.01, .25};
   ParameterVec3 srcpos{"srcPos", "", {0.0, 0.0, 0.0}};
-
-  // atomic<float> *mPeaks{nullptr};
+  Parameter freq{"freq", "", 55, 27.5, 650};
 
   Spatializer *spatializer{nullptr};
 
   ShaderProgram pointShader;
 
   Speakers speakerLayout;
+
+  float ph = 0;
 
   Nav particles[numParticles];
   Vec3f oldPos[numParticles];
@@ -65,11 +65,6 @@ struct MyApp : DistributedAppWithState<CommonState>
   void initSpeakers()
   {
     speakerLayout = AlloSphereSpeakerLayout();
-    // if (mPeaks) {
-    //   free(mPeaks);
-    // }
-    // mPeaks = new atomic<float>[speakerLayout.size()]; // Not being freed
-    //                                                   // in this example
   }
 
   void initSpatializer()
@@ -107,6 +102,7 @@ struct MyApp : DistributedAppWithState<CommonState>
       gui.add(sphereK);
       gui.add(minDist);
       gui.add(moveRate);
+      gui.add(freq);
       gui.add(srcpos);
     }
   }
@@ -256,9 +252,13 @@ struct MyApp : DistributedAppWithState<CommonState>
   {
     while (io())
     {
-      // float env = (22050 - (counter % 22050)) / 22050.0f;
+
       io.bus(0) = 0.5f * rnd::uniform();
-      // ++counter;
+      // ph += freq/44100;
+      // if(ph>1.){
+      //   ph -= 1.;
+      // }
+      // io.bus(0) = sin(M_PI_2*ph);
     }
     //    // Spatialize
     spatializer->prepare(io);
@@ -291,14 +291,10 @@ int main()
   AudioDevice::printAll();
   // app.audioIO().deviceIn(AudioDevice("MacBook Pro Microphone"));
   // app.audioIO().deviceOut(AudioDevice("MacBook Pro Speakers"));
-  app.audioIO().deviceOut(AudioDevice("ECHO X5"));
-
-  // int device_index_out = app.audioIO().channelsOutDevice();
-  // int device_index_in = app.audioIO().channelsInDevice();
-  // std::cout << "in:" << device_index_in << " out:" << device_index_out << std::endl;
   // app.configureAudio(44100, 512, 60, 0);
-  //  Use this for sphere
+  app.audioIO().deviceOut(AudioDevice("ECHO X5"));
   app.configureAudio(44100, 512, -1, -1);
+
   app.start();
   return 0;
 }
