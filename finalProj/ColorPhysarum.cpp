@@ -10,11 +10,13 @@
 #include "al/sound/al_Vbap.hpp"
 #include "al/sphere/al_AlloSphereSpeakerLayout.hpp"
 #include "al/ui/al_Parameter.hpp"
+#include "Gamma/Oscillator.h"
 #include "al_ext/statedistribution/al_CuttleboneDomain.hpp"
 #include "al_ext/statedistribution/al_CuttleboneStateSimulationDomain.hpp"
 
 using namespace std;
 using namespace al;
+using namespace gam;
 
 Vec3f randomVec3f(float scale)
 {
@@ -43,7 +45,6 @@ struct MyApp : DistributedAppWithState<CommonState>
   Parameter minDist{"minDist", "", 0.02, 0.0001, .25};
   Parameter moveRate{"moveRate", "", 0.035, 0.01, .25};
   ParameterVec3 srcpos{"srcPos", "", {0.0, 0.0, 0.0}};
-  Parameter freq{"freq", "", 55, 27.5, 650};
 
   Spatializer *spatializer{nullptr};
 
@@ -52,6 +53,15 @@ struct MyApp : DistributedAppWithState<CommonState>
   Speakers speakerLayout;
 
   float ph = 0;
+
+  int maxDex = 0;
+
+  Sine<> osc1;
+  Sine<> osc2;
+  Sine<> osc3;
+  Sine<> osc4;
+  Sine<> osc5;
+  Sine<> osc6;
 
   Nav particles[numParticles];
   Vec3f oldPos[numParticles];
@@ -102,7 +112,7 @@ struct MyApp : DistributedAppWithState<CommonState>
       gui.add(sphereK);
       gui.add(minDist);
       gui.add(moveRate);
-      gui.add(freq);
+
       gui.add(srcpos);
     }
   }
@@ -236,9 +246,13 @@ struct MyApp : DistributedAppWithState<CommonState>
         }
       }
       state().pointSize = pointSize;
-      Vec3f maxPos = particles[maxIndex].pos();
-      srcpos.set(maxPos.normalize());
-      state().colors[maxIndex].h += .015;
+      if (maxJerk > 7e-7)
+      {
+        Vec3f maxPos = particles[maxIndex].pos();
+        srcpos.set(maxPos.normalize());
+        state().colors[maxIndex].h += 0.125;
+        maxDex = maxIndex;
+      }
     }
 
     for (int i = 0; i < numParticles; i++)
@@ -252,13 +266,15 @@ struct MyApp : DistributedAppWithState<CommonState>
   {
     while (io())
     {
+      osc1.freq(27.5 + 1e6 * vel[maxDex].mag());
+      osc2.freq(55 + 1e6 * vel[maxDex].mag());
+      osc3.freq(137.5 + 1e6 * vel[maxDex].mag());
+      osc4.freq(192.5 + 1e6 * vel[maxDex].mag());
+      osc5.freq(96.25 + 1e6 * vel[maxDex].mag());
+      osc6.freq(178.75 + 1e6 * vel[maxDex].mag());
 
-      io.bus(0) = 0.5f * rnd::uniform();
-      // ph += freq/44100;
-      // if(ph>1.){
-      //   ph -= 1.;
-      // }
-      // io.bus(0) = sin(M_PI_2*ph);
+      float s = (osc1() + osc2() + osc3() + osc4() + osc5() + osc6()) * 0.05;
+      io.bus(0) = s;
     }
     //    // Spatialize
     spatializer->prepare(io);
