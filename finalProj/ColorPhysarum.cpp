@@ -8,6 +8,7 @@
 #include "al/app/al_GUIDomain.hpp"
 #include "al/scene/al_DynamicScene.hpp"
 #include "al/sound/al_Vbap.hpp"
+#include "al/sound/al_Lbap.hpp"
 #include "al/sphere/al_AlloSphereSpeakerLayout.hpp"
 #include "al/ui/al_Parameter.hpp"
 #include "Gamma/Oscillator.h"
@@ -37,7 +38,7 @@ struct CommonState
 struct MyApp : DistributedAppWithState<CommonState>
 {
 
-  Parameter pointSize{"pointSize", "", 5, 0.1, 20.0};
+  Parameter pointSize{"pointSize", "", 2, 0.1, 20.0};
   Parameter sight{"sight", "", 0.45, 0.001, 1.0};
   Parameter turnRate{"turnRate", "", 0.35, 0.01, .55};
   Parameter randTurn{"randTurn", "", 0.01, 0.001, .25};
@@ -52,9 +53,8 @@ struct MyApp : DistributedAppWithState<CommonState>
 
   Speakers speakerLayout;
 
-  float ph = 0;
-
   int maxDex = 0;
+  Nav soundPos;
 
   Sine<> osc1;
   Sine<> osc2;
@@ -74,7 +74,7 @@ struct MyApp : DistributedAppWithState<CommonState>
 
   void initSpeakers()
   {
-    speakerLayout = AlloSphereSpeakerLayout();
+    speakerLayout = AlloSphereSpeakerLayoutCompensated();
   }
 
   void initSpatializer()
@@ -83,7 +83,7 @@ struct MyApp : DistributedAppWithState<CommonState>
     {
       delete spatializer;
     }
-    spatializer = new Vbap(speakerLayout, true);
+    spatializer = new Lbap(speakerLayout);
     spatializer->compile();
   }
 
@@ -227,7 +227,8 @@ struct MyApp : DistributedAppWithState<CommonState>
         vel[i] = p.pos() - oldPos[i];
         acc[i] = vel[i] - oldVel[i];
         Vec3f jerk = acc[i] - oldAcc[i];
-        if (jerk.mag() > maxJerk)
+        float dif = jerk.mag() - maxJerk;
+        if (dif > 25e-8)
         {
           maxJerk = jerk.mag();
           maxIndex = i;
@@ -249,10 +250,19 @@ struct MyApp : DistributedAppWithState<CommonState>
       if (maxJerk > 7e-7)
       {
         Vec3f maxPos = particles[maxIndex].pos();
-        srcpos.set(maxPos.normalize());
+        soundPos.faceToward(maxPos, .125);
         state().colors[maxIndex].h += 0.125;
         maxDex = maxIndex;
       }
+
+      if (soundPos.pos().mag() > 5)
+      {
+        soundPos.faceToward(Vec3f(0, 0, 0), .012);
+      }
+      soundPos.moveF(.12);
+      soundPos.step();
+
+      srcpos.set(soundPos.pos());
     }
 
     for (int i = 0; i < numParticles; i++)
@@ -266,18 +276,20 @@ struct MyApp : DistributedAppWithState<CommonState>
   {
     while (io())
     {
-      osc1.freq(27.5 + 1e6 * vel[maxDex].mag());
-      osc2.freq(55 + 1e6 * vel[maxDex].mag());
-      osc3.freq(137.5 + 1e6 * vel[maxDex].mag());
-      osc4.freq(192.5 + 1e6 * vel[maxDex].mag());
-      osc5.freq(96.25 + 1e6 * vel[maxDex].mag());
-      osc6.freq(178.75 + 1e6 * vel[maxDex].mag());
+      osc1.freq(27.5 + 1e9 * vel[maxDex].mag());
+      osc2.freq(55 + 1e9 * vel[maxDex].mag());
+      osc3.freq(137.5 + 1e9 * vel[maxDex].mag());
+      osc4.freq(192.5 + 1e9 * vel[maxDex].mag());
+      osc5.freq(96.25 + 1e9 * vel[maxDex].mag());
+      osc6.freq(178.75 + 1e9 * vel[maxDex].mag());
 
       float s = (osc1() + osc2() + osc3() + osc4() + osc5() + osc6()) * 0.05;
       io.bus(0) = s;
     }
     //    // Spatialize
+
     spatializer->prepare(io);
+
     spatializer->renderBuffer(io, srcpos.get(), io.busBuffer(0),
                               io.framesPerBuffer());
     spatializer->finalize(io);
@@ -310,6 +322,8 @@ int main()
   // app.configureAudio(44100, 512, 60, 0);
   app.audioIO().deviceOut(AudioDevice("ECHO X5"));
   app.configureAudio(44100, 512, -1, -1);
+  // app.audioIO().deviceOut(AudioDevice("AlloCipher"));
+  // app.configureAudio(48000, 512, 64, 64);
 
   app.start();
   return 0;
