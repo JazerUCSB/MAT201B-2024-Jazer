@@ -74,7 +74,7 @@ struct MyApp : DistributedAppWithState<CommonState>
 
   void initSpeakers()
   {
-    speakerLayout = AlloSphereSpeakerLayoutCompensated();
+    speakerLayout = AlloSphereSpeakerLayout();
   }
 
   void initSpatializer()
@@ -92,6 +92,8 @@ struct MyApp : DistributedAppWithState<CommonState>
     audioIO().channelsBus(1);
     initSpeakers();
     initSpatializer();
+
+    soundPos.pos() = Vec3f(15, 15, 15);
 
     auto cuttleboneDomain =
         CuttleboneStateSimulationDomain<CommonState>::enableCuttlebone(this);
@@ -249,17 +251,25 @@ struct MyApp : DistributedAppWithState<CommonState>
       state().pointSize = pointSize;
       if (maxJerk > 7e-7)
       {
-        Vec3f maxPos = particles[maxIndex].pos();
+        Vec3f maxPos = particles[maxIndex].pos() * 10;
         soundPos.faceToward(maxPos, .125);
         state().colors[maxIndex].h += 0.125;
         maxDex = maxIndex;
       }
 
-      if (soundPos.pos().mag() > 5)
+      if (soundPos.pos().mag() > 20)
       {
         soundPos.faceToward(Vec3f(0, 0, 0), .012);
       }
-      soundPos.moveF(.12);
+
+      Vec3f normPos = soundPos.pos();
+      normPos.normalize();
+      if (soundPos.pos().mag() < (normPos.mag() * 10))
+      {
+        soundPos.pos() = normPos * 10;
+      }
+
+      soundPos.moveF(.25);
       soundPos.step();
 
       srcpos.set(soundPos.pos());
@@ -276,12 +286,19 @@ struct MyApp : DistributedAppWithState<CommonState>
   {
     while (io())
     {
-      osc1.freq(27.5 + 1e9 * vel[maxDex].mag());
-      osc2.freq(55 + 1e9 * vel[maxDex].mag());
-      osc3.freq(137.5 + 1e9 * vel[maxDex].mag());
-      osc4.freq(192.5 + 1e9 * vel[maxDex].mag());
-      osc5.freq(96.25 + 1e9 * vel[maxDex].mag());
-      osc6.freq(178.75 + 1e9 * vel[maxDex].mag());
+      // osc1.freq(27.5 + 1e8 * vel[maxDex].mag());
+      // osc2.freq(55 + 1e8 * vel[maxDex].mag());
+      // osc3.freq(137.5 + 1e8 * vel[maxDex].mag());
+      // osc4.freq(192.5 + 1e8 * vel[maxDex].mag());
+      // osc5.freq(96.25  + 1e8 * vel[maxDex].mag());
+      // osc6.freq(178.75 + 1e8 * vel[maxDex].mag());
+
+      osc1.freq(27.5 + 10 * particles[maxDex].pos().x);
+      osc2.freq(55 + 10 * particles[maxDex].pos().y);
+      osc3.freq(137.5 + 10 * particles[maxDex].pos().z);
+      osc4.freq(192.5 + 1e8 * vel[maxDex].x);
+      osc5.freq(96.25 + 1e8 * vel[maxDex].y);
+      osc6.freq(178.75 + 1e8 * vel[maxDex].z);
 
       float s = (osc1() + osc2() + osc3() + osc4() + osc5() + osc6()) * 0.05;
       io.bus(0) = s;
@@ -320,10 +337,10 @@ int main()
   // app.audioIO().deviceIn(AudioDevice("MacBook Pro Microphone"));
   // app.audioIO().deviceOut(AudioDevice("MacBook Pro Speakers"));
   // app.configureAudio(44100, 512, 60, 0);
-  app.audioIO().deviceOut(AudioDevice("ECHO X5"));
-  app.configureAudio(44100, 512, -1, -1);
   // app.audioIO().deviceOut(AudioDevice("AlloCipher"));
   // app.configureAudio(48000, 512, 64, 64);
+  app.audioIO().deviceOut(AudioDevice("ECHO X5"));
+  app.configureAudio(44100, 512, -1, -1);
 
   app.start();
   return 0;
