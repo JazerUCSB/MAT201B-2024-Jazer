@@ -9,7 +9,7 @@
 #include "al/scene/al_DynamicScene.hpp"
 #include "al/sound/al_Vbap.hpp"
 #include "al/sound/al_Lbap.hpp"
-#include "al/graphics/al_Lens.hpp"
+
 #include "al/sphere/al_AlloSphereSpeakerLayout.hpp"
 #include "al/ui/al_Parameter.hpp"
 #include "Gamma/Oscillator.h"
@@ -56,8 +56,6 @@ struct MyApp : DistributedAppWithState<CommonState>
   int maxDex = 0;
   Nav soundPos;
 
-  Lens lens;
-
   Sine<> osc1;
   Sine<> osc2;
   Sine<> osc3;
@@ -94,8 +92,6 @@ struct MyApp : DistributedAppWithState<CommonState>
     audioIO().channelsBus(1);
     initSpeakers();
     initSpatializer();
-
-    lens.eyeSep(0);
 
     soundPos.pos() = Vec3f(15, 15, 15);
 
@@ -315,7 +311,7 @@ struct MyApp : DistributedAppWithState<CommonState>
     g.shader(pointShader);
     float pSize = state().pointSize;
     g.shader().uniform("pointSize", pSize / 100);
-
+    g.lens().eyeSep(0);
     g.blending(true);
     g.blendTrans();
     g.depthTesting(true);
