@@ -9,6 +9,7 @@
 #include "al/scene/al_DynamicScene.hpp"
 #include "al/sound/al_Vbap.hpp"
 #include "al/sound/al_Lbap.hpp"
+#include "al/graphics/al_Lens.hpp"
 #include "al/sphere/al_AlloSphereSpeakerLayout.hpp"
 #include "al/ui/al_Parameter.hpp"
 #include "Gamma/Oscillator.h"
@@ -44,8 +45,7 @@ struct MyApp : DistributedAppWithState<CommonState>
   Parameter randTurn{"randTurn", "", 0.01, 0.001, .25};
   Parameter sphereK{"sphereK", "", 0.14, 0.01, .55};
   Parameter minDist{"minDist", "", 0.02, 0.0001, .25};
-  Parameter moveRate{"moveRate", "", 0.035, 0.01, .25};
-  ParameterVec3 srcpos{"srcPos", "", {0.0, 0.0, 0.0}};
+  Parameter moveRate{"moveRate", "", 0.055, 0.01, .25};
 
   Spatializer *spatializer{nullptr};
 
@@ -55,6 +55,8 @@ struct MyApp : DistributedAppWithState<CommonState>
 
   int maxDex = 0;
   Nav soundPos;
+
+  Lens lens;
 
   Sine<> osc1;
   Sine<> osc2;
@@ -93,6 +95,8 @@ struct MyApp : DistributedAppWithState<CommonState>
     initSpeakers();
     initSpatializer();
 
+    lens.eyeSep(0);
+
     soundPos.pos() = Vec3f(15, 15, 15);
 
     auto cuttleboneDomain =
@@ -114,8 +118,6 @@ struct MyApp : DistributedAppWithState<CommonState>
       gui.add(sphereK);
       gui.add(minDist);
       gui.add(moveRate);
-
-      gui.add(srcpos);
     }
   }
   void onCreate() override
@@ -271,13 +273,12 @@ struct MyApp : DistributedAppWithState<CommonState>
 
       soundPos.moveF(.25);
       soundPos.step();
-
-      srcpos.set(soundPos.pos());
     }
 
     for (int i = 0; i < numParticles; i++)
     {
       mesh.vertices()[i] = state().positions[i];
+
       mesh.colors()[i] = state().colors[i];
     }
   }
@@ -286,12 +287,6 @@ struct MyApp : DistributedAppWithState<CommonState>
   {
     while (io())
     {
-      // osc1.freq(27.5 + 1e8 * vel[maxDex].mag());
-      // osc2.freq(55 + 1e8 * vel[maxDex].mag());
-      // osc3.freq(137.5 + 1e8 * vel[maxDex].mag());
-      // osc4.freq(192.5 + 1e8 * vel[maxDex].mag());
-      // osc5.freq(96.25  + 1e8 * vel[maxDex].mag());
-      // osc6.freq(178.75 + 1e8 * vel[maxDex].mag());
 
       osc1.freq(27.5 + 10 * particles[maxDex].pos().x);
       osc2.freq(55 + 10 * particles[maxDex].pos().y);
@@ -307,7 +302,7 @@ struct MyApp : DistributedAppWithState<CommonState>
 
     spatializer->prepare(io);
 
-    spatializer->renderBuffer(io, srcpos.get(), io.busBuffer(0),
+    spatializer->renderBuffer(io, soundPos.pos(), io.busBuffer(0),
                               io.framesPerBuffer());
     spatializer->finalize(io);
   }
@@ -316,9 +311,11 @@ struct MyApp : DistributedAppWithState<CommonState>
   {
 
     g.clear(0, 0, 0, .0);
+
     g.shader(pointShader);
     float pSize = state().pointSize;
     g.shader().uniform("pointSize", pSize / 100);
+
     g.blending(true);
     g.blendTrans();
     g.depthTesting(true);
@@ -327,6 +324,14 @@ struct MyApp : DistributedAppWithState<CommonState>
 
   bool onKeyDown(const Keyboard &k) override
   {
+    if (k.key() == '1')
+    {
+
+      for (int i = 0; i < numParticles; i++)
+      {
+        state().colors[i].h = rnd::uniform();
+      }
+    }
   }
 };
 
